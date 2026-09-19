@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kitchen Place</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #242424; --surface3: #2e2e2e;
+  --border: #2e2e2e; --border2: #3a3a3a;
+  --accent: #e8c97a; --accent2: #4d8b6f; --danger: #c05050; --warn: #d97b3a;
+  --text: #f0f0f0; --text2: #a0a0a0; --text3: #555;
+  --radius: 12px; --radius-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  height: 100%; margin: 0; background: var(--bg); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 15px;
+  overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; flex-direction: column; height: 100%; }
+.screen.active { display: flex; }
+
+/* ── LOGIN ── */
+/* FIX Bug10: min-height + auto height so small phones don't clip */
+#login-screen { align-items: stretch; justify-content: flex-start; overflow-y: auto; height: auto; min-height: 100%; }
+.login-hero {
+  background: var(--surface); padding: 48px 24px 32px; text-align: center;
+  border-bottom: 1px solid var(--border);
+  padding-top: calc(48px + env(safe-area-inset-top, 0px));
+}
+.login-hero h1 { margin: 0 0 4px; font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: -0.5px; }
+.login-hero p { margin: 0; font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.login-body { padding: 24px 20px; flex: 1; }
+.login-body h2 { font-size: 14px; font-weight: 600; color: var(--text2); margin: 0 0 14px; letter-spacing: 0.3px; }
+.location-btn {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 15px 16px; margin-bottom: 10px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+  cursor: pointer; text-align: left; transition: border-color .15s, background .15s;
+}
+.location-btn:active { background: var(--surface2); }
+.location-btn .loc-addr { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.location-btn .chevron { color: var(--text3); font-size: 18px; }
+.commissary-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.commissary-section h2 { font-size: 14px; font-weight: 600; color: var(--text2); margin: 0 0 14px; }
+.pin-wrap { display: flex; gap: 10px; }
+/* FIX Bug8: autocomplete="off" set in HTML */
+.pin-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 13px 14px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 18px; letter-spacing: 4px;
+  outline: none; text-align: center;
+}
+.pin-input:focus { border-color: var(--accent); }
+.pin-btn {
+  background: var(--accent); color: #111; border: none; border-radius: var(--radius-sm);
+  padding: 13px 20px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.pin-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+/* ── APP SHELL ── */
+#app-screen { overflow: hidden; }
+#app-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 16px 10px; flex-shrink: 0; display: flex;
+  justify-content: space-between; align-items: center;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+}
+.header-left h1 { margin: 0 0 2px; font-size: 16px; font-weight: 600; color: var(--accent); }
+.header-left p { margin: 0; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.logout-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 5px 10px; cursor: pointer;
+}
+#tab-bar {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto;
+}
+#tab-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 1; min-width: 70px; padding: 11px 4px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--text3);
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap; transition: color .2s, border-color .2s;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn.hidden { display: none; }
+/* FIX Bug9: overflow-x hidden to prevent horizontal scroll */
+#tab-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; position: relative; }
+
+/* ── PANE ── */
+.pane { display: none; }
+.pane.active { display: block; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  position: sticky; top: 0; z-index: 20; background: var(--surface);
+  border-bottom: 1px solid var(--border); padding: 10px 14px;
+  display: flex; gap: 8px; align-items: center;
+}
+.search-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.action-btn {
+  background: var(--accent); color: #111; border: none; border-radius: var(--radius-sm);
+  padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+}
+.action-btn.green { background: var(--accent2); color: #fff; }
+.action-btn.outline { background: none; border: 1px solid var(--border2); color: var(--text2); }
+.action-btn.red { background: var(--danger); color: #fff; }
+
+/* ── COUNTS ── */
+.product-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+.product-name { flex: 1; font-size: 14px; font-weight: 500; }
+.count-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.count-val { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; }
+.par-label { font-size: 11px; color: var(--text3); }
+.par-low { color: var(--danger) !important; }
+.par-ok { color: var(--accent2) !important; }
+.editor-wrap { display: none; align-items: center; gap: 6px; }
+.editor-wrap.on { display: flex; }
+.count-input {
+  width: 64px; background: var(--surface3); border: 1px solid var(--accent);
+  border-radius: 6px; padding: 6px 8px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 15px; text-align: center; outline: none;
+}
+.unit-tag { font-size: 12px; color: var(--text2); }
+.static-wrap.gone { display: none; }
+
+/* par settings */
+.par-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+.par-name { flex: 1; font-size: 14px; }
+/* FIX Bug4: use data attributes for pars instead of IDs with spaces */
+.par-field {
+  width: 72px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 8px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 14px; text-align: center; outline: none;
+}
+.par-field:focus { border-color: var(--accent); }
+
+/* ── RECIPES ── */
+.recipe-card { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.rc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.rc-name { font-size: 15px; font-weight: 600; }
+.rc-shift { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.rc-actions { display: flex; gap: 6px; margin-top: 8px; }
+.rc-edit-btn {
+  background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px;
+  padding: 5px 10px; color: var(--text2); font-family: 'DM Sans',sans-serif;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.recipe-detail { display: none; background: var(--surface2); margin: 0 12px 10px; border-radius: var(--radius-sm); padding: 12px; }
+.recipe-detail.open { display: block; }
+.detail-head { display: grid; grid-template-columns: 1fr 100px; font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 6px; gap: 4px; }
+.detail-row { display: grid; grid-template-columns: 1fr 100px; font-size: 13px; padding: 5px 0; border-top: 1px solid var(--border); gap: 4px; align-items: center; }
+.detail-process { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border2); }
+.detail-process-lbl { font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: .5px; margin-bottom: 6px; }
+.detail-process-text { font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; background: var(--surface3); border-radius: 6px; padding: 10px 12px; }
+
+/* ── RECIPE EDITOR (commissary) ── */
+.recipe-editor {
+  background: var(--surface); border-radius: var(--radius); margin: 16px;
+  border: 1px solid var(--border2); overflow: hidden;
+}
+.re-header {
+  background: var(--surface2); padding: 14px 16px; display: flex;
+  justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.re-title { font-size: 15px; font-weight: 600; }
+.re-body { padding: 16px; }
+.re-section { font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: .5px; margin: 14px 0 8px; }
+.re-row { display: grid; grid-template-columns: 1fr 120px 32px; gap: 6px; margin-bottom: 8px; align-items: center; }
+.re-row-head { display: grid; grid-template-columns: 1fr 120px 32px; gap: 6px; margin-bottom: 4px; }
+.re-process { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; resize: vertical; min-height: 100px; line-height: 1.6; }
+.re-process:focus { border-color: var(--accent); }
+.re-row-head span { font-size: 11px; color: var(--text3); font-weight: 600; }
+.re-fi {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13px; outline: none; width: 100%;
+}
+.re-fi:focus { border-color: var(--accent); }
+.re-del-btn {
+  background: none; border: none; color: var(--danger); font-size: 18px;
+  cursor: pointer; padding: 0; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.re-add-ing-btn {
+  background: none; border: 1px dashed var(--border2); border-radius: 6px;
+  color: var(--text3); font-size: 13px; padding: 8px; width: 100%; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; margin-top: 4px;
+}
+.re-add-ing-btn:active { background: var(--surface2); }
+.re-footer { display: flex; gap: 10px; margin-top: 16px; }
+.re-cancel { flex: 1; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 11px; color: var(--text2); font-family: 'DM Sans',sans-serif; font-size: 14px; cursor: pointer; }
+.re-save { flex: 2; background: var(--accent2); color: #fff; border: none; border-radius: var(--radius-sm); padding: 11px; font-family: 'DM Sans',sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.re-delete { background: var(--danger); color: #fff; border: none; border-radius: var(--radius-sm); padding: 11px 14px; font-family: 'DM Sans',sans-serif; font-size: 14px; cursor: pointer; }
+.add-recipe-btn {
+  display: block; width: calc(100% - 32px); margin: 16px; background: var(--surface2);
+  border: 1px dashed var(--border2); border-radius: var(--radius-sm); padding: 13px;
+  color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  cursor: pointer; text-align: center;
+}
+.add-recipe-btn:active { background: var(--surface3); }
+.recipe-custom-badge {
+  font-size: 10px; background: var(--accent2); color: #fff; border-radius: 4px;
+  padding: 1px 5px; margin-left: 6px; vertical-align: middle; font-family: 'DM Mono',monospace;
+}
+
+/* ── TEMP LOG ── */
+.mode-strip {
+  display: flex; gap: 8px; padding: 10px 14px; background: var(--surface);
+  border-bottom: 1px solid var(--border); overflow-x: auto; flex-shrink: 0;
+}
+.mode-strip::-webkit-scrollbar { display: none; }
+.mode-pill {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 7px 14px; color: var(--text2); font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+}
+.mode-pill.active { background: var(--accent); color: #111; border-color: var(--accent); }
+.log-form { padding: 16px; }
+.log-form h3 { margin: 0 0 14px; font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: .5px; }
+.fg { margin-bottom: 14px; }
+.fg label { display: block; font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 5px; }
+.fi, .fs {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 12px; color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
+}
+.fi:focus, .fs:focus { border-color: var(--accent); }
+.fs option { background: var(--surface2); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.submit-btn {
+  width: 100%; background: var(--accent2); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 13px; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px;
+}
+.submit-btn:active { opacity: .85; }
+
+/* Cooling checkpoints */
+.checkpoint-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin: 0 16px 12px; padding: 14px;
+}
+.cp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.cp-name { font-size: 14px; font-weight: 600; }
+.cp-date { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.cp-steps { display: flex; flex-direction: column; gap: 8px; }
+.cp-step {
+  display: flex; align-items: center; gap: 10px; background: var(--surface2);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.cp-step-label { font-size: 12px; color: var(--text2); font-weight: 500; width: 70px; flex-shrink: 0; }
+.cp-step-content { flex: 1; }
+.cp-logged { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; }
+.cp-log-btn {
+  background: var(--accent); color: #111; border: none; border-radius: 6px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.cp-log-btn.done { background: var(--surface3); color: var(--text3); cursor: default; }
+.cp-due { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.temp-safe { color: var(--accent2); }
+.temp-warn { color: var(--warn); }
+.temp-danger { color: var(--danger); }
+
+/* history */
+.hist-entry {
+  background: var(--surface); border-radius: var(--radius-sm); padding: 12px;
+  margin: 10px 14px 0; border-left: 3px solid var(--accent2);
+}
+.hist-entry.recv { border-left-color: var(--accent); }
+.hist-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.hist-name { font-size: 14px; font-weight: 600; }
+.hist-temp { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 600; }
+.hist-meta { font-size: 12px; color: var(--text3); }
+.export-bar { padding: 14px; display: flex; gap: 10px; }
+.export-btn {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px; color: var(--text);
+  font-size: 13px; font-weight: 500; cursor: pointer; text-align: center;
+}
+
+/* ── MODAL ── */
+#modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 100; align-items: flex-end; justify-content: center;
+}
+#modal-overlay.open { display: flex; }
+#modal-box {
+  background: var(--surface); border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px; width: 100%; max-width: 480px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+#modal-box h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+#modal-box p { margin: 0 0 16px; font-size: 13px; color: var(--text2); }
+#modal-temp {
+  width: 100%; background: var(--surface2); border: 1px solid var(--accent);
+  border-radius: var(--radius-sm); padding: 14px; font-family: 'DM Mono', monospace;
+  font-size: 22px; text-align: center; color: var(--text); outline: none; margin-bottom: 14px;
+}
+.modal-btns { display: flex; gap: 10px; }
+.modal-cancel {
+  flex: 1; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 12px; color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer;
+}
+.modal-save {
+  flex: 2; background: var(--accent2); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 12px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+
+/* ── CONFIRM DIALOG ── */
+#confirm-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 110; align-items: center; justify-content: center; padding: 20px;
+}
+#confirm-overlay.open { display: flex; }
+#confirm-box {
+  background: var(--surface); border-radius: var(--radius); padding: 24px;
+  width: 100%; max-width: 360px;
+}
+#confirm-box h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+#confirm-box p { margin: 0 0 20px; font-size: 14px; color: var(--text2); }
+.confirm-btns { display: flex; gap: 10px; }
+.confirm-cancel {
+  flex: 1; background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 11px; color: var(--text2); font-family: 'DM Sans',sans-serif; font-size: 14px; cursor: pointer;
+}
+.confirm-ok {
+  flex: 2; background: var(--danger); color: #fff; border: none;
+  border-radius: var(--radius-sm); padding: 11px;
+  font-family: 'DM Sans',sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); left: 50%;
+  transform: translateX(-50%); background: var(--accent2); color: #fff;
+  padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+.bottom-pad { height: 20px; }
+.empty-state { padding: 40px 20px; text-align: center; color: var(--text3); font-size: 14px; }
+.section-label { padding: 10px 16px 4px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; background: var(--bg); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="login-hero">
+    <h1>Kitchen Place</h1>
+    <p>COMMISSARY OPERATIONS</p>
+  </div>
+  <div class="login-body">
+    <h2>SELECT YOUR LOCATION</h2>
+    <button class="location-btn" onclick="loginLocation('Miz La La West Adams')">
+      <div><div>Miz La La West Adams</div><div class="loc-addr">5400 W Adams Blvd, LA</div></div>
+      <span class="chevron">›</span>
+    </button>
+    <button class="location-btn" onclick="loginLocation('Miz La La Sherman Oaks')">
+      <div><div>Miz La La Sherman Oaks</div><div class="loc-addr">4515 Sepulveda Blvd, LA</div></div>
+      <span class="chevron">›</span>
+    </button>
+    <button class="location-btn" onclick="loginLocation('Miz La La Sycamore')">
+      <div><div>Miz La La Sycamore</div><div class="loc-addr">Los Angeles, CA</div></div>
+      <span class="chevron">›</span>
+    </button>
+    <button class="location-btn" onclick="loginLocation('Johnny\'s Pastrami West Adams')">
+      <div><div>Johnny's Pastrami West Adams</div><div class="loc-addr">4327 W Adams Blvd, LA</div></div>
+      <span class="chevron">›</span>
+    </button>
+    <button class="location-btn" onclick="loginLocation('Vicky\'s All Day')">
+      <div><div>Vicky's All Day</div><div class="loc-addr">5410 W Adams Blvd, LA</div></div>
+      <span class="chevron">›</span>
+    </button>
+
+    <div class="commissary-section">
+      <h2>COMMISSARY / ADMIN</h2>
+      <div class="pin-wrap">
+        <!-- FIX Bug8: autocomplete="off" -->
+        <input id="pin-input" class="pin-input" type="password" inputmode="numeric"
+               maxlength="4" placeholder="PIN" autocomplete="off">
+        <button class="pin-btn" onclick="loginCommissary()">Enter</button>
+      </div>
+      <div class="pin-error" id="pin-error">Incorrect PIN. Try again.</div>
+    </div>
+    <div class="bottom-pad"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ APP ═══════════════════════════ -->
+<div id="app-screen" class="screen">
+  <div id="app-header">
+    <div class="header-left">
+      <h1 id="loc-name">Location</h1>
+      <p id="loc-date"></p>
+    </div>
+    <button class="logout-btn" onclick="logout()">Switch ⇄</button>
+  </div>
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="counts" onclick="showTab('counts')">Counts</button>
+    <button class="tab-btn" data-tab="recipes" onclick="showTab('recipes')">Recipes</button>
+    <button class="tab-btn" data-tab="temp" onclick="showTab('temp')">Temp Log</button>
+    <button class="tab-btn hidden" data-tab="pars" id="tab-pars" onclick="showTab('pars')">Set Pars</button>
+  </div>
+  <div id="tab-content">
+
+    <!-- ── COUNTS PANE ── -->
+    <div class="pane active" id="pane-counts">
+      <div class="toolbar">
+        <input class="search-input" type="search" placeholder="Search…" oninput="filterCounts(this.value)">
+        <button class="action-btn" id="edit-btn" onclick="toggleEditing()">Update</button>
+      </div>
+      <div id="count-list"></div>
+      <div class="bottom-pad"></div>
+    </div>
+
+    <!-- ── RECIPES PANE ── -->
+    <div class="pane" id="pane-recipes">
+      <div class="toolbar">
+        <input class="search-input" type="search" placeholder="Search recipes…" oninput="filterRecipes(this.value)">
+      </div>
+      <div id="recipe-list"></div>
+      <div class="bottom-pad"></div>
+    </div>
+
+    <!-- ── TEMP LOG PANE ── -->
+    <div class="pane" id="pane-temp">
+      <div class="mode-strip" id="mode-strip"></div>
+      <div id="temp-body"></div>
+    </div>
+
+    <!-- ── SET PARS PANE (commissary/admin) ── -->
+    <div class="pane" id="pane-pars">
+      <div class="toolbar">
+        <input class="search-input" type="search" placeholder="Search products…" oninput="filterPars(this.value)">
+        <button class="action-btn green" onclick="savePars()">Save</button>
+      </div>
+      <div id="par-list"></div>
+      <div class="bottom-pad"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TEMP INPUT MODAL ── -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h3 id="modal-title">Log Temperature</h3>
+    <p id="modal-sub"></p>
+    <input id="modal-temp" type="number" placeholder="°F" inputmode="decimal">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-save" onclick="saveModalTemp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DIALOG ── -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <h3 id="confirm-title">Delete Recipe?</h3>
+    <p id="confirm-msg">This cannot be undone.</p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-ok" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  HARDCODED DATA
+// ══════════════════════════════════════════════════════════
+const PRODUCTS = ["HUMMUS","TAHINI SPREAD","ONION MIX","BRUSSEL SAUCE","ONION MARMALADE","ANCHOVY SAUCE","CHEESE FILLING","CHICKEN BRINE","CHILI","MERGUEZ","HOLLANDAISE SAUCE","BEET PICKLING","BANANA FOSTERS","KEFTA","OVT","LAMB FAT","CHICKEN STOCK","APRICOT MUSTARD","SHAKSHOUKA SAUCE","ROASTED RED PEPPERS","HARIRA SOUP","SPICED BEEF FAT","TOMATILLO SALSA","PINK SAUCE","SHAKING BEEF SAUCE","CLW SAUCE","AU JUS SAUCE","RANCH","TARRAGON PESTO","POMODORO","CILANTRO PLUM","GINGER DRESSING","VEGAN MAYO","CACIO PEPE","SPINACH MIX","RICOTTA GNOCCHI","SPICY BEEF","TENDON","BEEF STOCK","TOMATO RICE MIX","BEEF BOLOGNESE","CARROT HARISSA","VEGAN AIOLI","HARISSA AIOLI","GARLIC SAUCE","VEGAN GARLIC SAUCE","AIOLI","CUCUMBER YOGURT","PARSLEY PUREE","APPLE CHUTNEY","PASTA SALAD DRESSING","PICKLE SALT MIX","COLESLAW DRESSING","POTATO SALAD DRESSING","THOUSAND ISLAND","SPICY CREAMY SAUCE","HARISSA","MUHAMMARA","BABAGANOUSH","ZHOUG","FALAFEL MIX","LABNEH"];
+
+const LOCATIONS = ['Miz La La West Adams','Miz La La Sherman Oaks','Miz La La Sycamore',"Johnny's Pastrami West Adams","Vicky's All Day"];
+const COMMISSARY_PIN = '5658';
+
+const BASE_RECIPES = {
+  "SHAKSHOUKA SAUCE":{shift:"AM",ingredients:[{name:"EVOO",qty:"2 KG",cost:46.61},{name:"CHOPPED ONIONS",qty:"10 LBS",cost:12.50},{name:"RED BELL PEPPER",qty:"9 KG",cost:101.22},{name:"SERRANO",qty:"225 G",cost:0.69},{name:"GARLIC",qty:"600 G",cost:5.22},{name:"CANNED TOMATO",qty:"5 EA",cost:28.75},{name:"SPANISH PAPRIKA",qty:"400 G",cost:4.35},{name:"GROUND ANCHO",qty:"300 G",cost:4.11},{name:"GROUND CHIPOTLE",qty:"100 G",cost:1.72},{name:"BROWN SUGAR",qty:"1200 G",cost:3.38},{name:"CHICKEN BASE",qty:"350 G",cost:3.68},{name:"SALT",qty:"90 G",cost:0.61},{name:"GROUND CUMIN",qty:"90 G",cost:1.19},{name:"CITRIC ACID",qty:"40 G",cost:0.37},{name:"VACUUM BAG",qty:"6 EA",cost:1.46}]},
+  "TOMATILLO SALSA":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"600 G",cost:1.38},{name:"CHOPPED ONIONS",qty:"10 LBS",cost:12.50},{name:"SERRANO",qty:"700 G",cost:2.14},{name:"GARLIC",qty:"500 G",cost:4.35},{name:"TOMATILLO",qty:"35 LBS",cost:37.19},{name:"GROUND CUMIN",qty:"180 G",cost:2.37},{name:"CHICKEN BASE",qty:"400 G",cost:4.20},{name:"SALT",qty:"150 G",cost:1.01},{name:"CITRIC ACID",qty:"50 G",cost:0.47},{name:"CAYENNE",qty:"25 G",cost:0.21},{name:"CILANTRO",qty:"18 EA",cost:8.25},{name:"PARSLEY",qty:"7 EA",cost:2.28},{name:"VACUUM BAG",qty:"7 EA",cost:1.71}]},
+  "AU JUS SAUCE":{shift:"AM",ingredients:[{name:"BEEF STOCK",qty:"1 EA",cost:0.57},{name:"KITCHEN BOUQUET",qty:"570 G",cost:5.02},{name:"BEEF BASE",qty:"2 LBS",cost:13.17},{name:"GARLIC",qty:"600 G",cost:5.22},{name:"WORCESTERSHIRE",qty:"1400 G",cost:5.01},{name:"SOY SAUCE",qty:"800 G",cost:2.84},{name:"BLACK PEPPER",qty:"60 G",cost:0.86},{name:"SALT",qty:"40 G",cost:0.27},{name:"BROWN SUGAR",qty:"500 G",cost:1.41},{name:"AJI",qty:"100 G",cost:1.54},{name:"VACUUM BAG",qty:"9 EA",cost:2.20}]},
+  "TAHINI SPREAD":{shift:"AM",ingredients:[{name:"TAHINI",qty:"6500 G",cost:34.32},{name:"LEMON JUICE",qty:"1 L",cost:3.40},{name:"GARLIC",qty:"120 G",cost:1.04},{name:"SALT",qty:"130 G",cost:0.88},{name:"GROUND CUMIN",qty:"35 G",cost:0.46},{name:"BLACK PEPPER",qty:"7 G",cost:0.10},{name:"VACUUM BAG",qty:"3 EA",cost:0.73}]},
+  "BEET PICKLING":{shift:"AM",ingredients:[{name:"RED WINE VINEGAR",qty:"4 GAL",cost:39.00},{name:"GARLIC",qty:"400 G",cost:3.48},{name:"SUGAR",qty:"4600 G",cost:8.40},{name:"WHOLE THYME",qty:"20 G",cost:0.22},{name:"SALT",qty:"238 G",cost:1.61},{name:"AJI",qty:"100 G",cost:1.54},{name:"BAY LEAVES",qty:"5 EA",cost:0},{name:"VACUUM BAG",qty:"4 EA",cost:0.98}]},
+  "ONION MARMALADE":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"0.5 L",cost:1.10},{name:"CHOPPED ONIONS",qty:"20 LBS",cost:25.00},{name:"BALSAMIC VINEGAR",qty:"1 GAL",cost:25.89},{name:"SUGAR",qty:"1600 G",cost:2.92},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "MERGUEZ":{shift:"AM",ingredients:[{name:"LAMB CASING",qty:"1 EA",cost:50.00},{name:"BEEF CHUCK",qty:"15 KG",cost:230.77},{name:"LAMB FAT",qty:"4 KG",cost:38.47},{name:"GARLIC",qty:"250 G",cost:2.17},{name:"SEASONING SALT",qty:"200 G",cost:2.11},{name:"WHITE PEPPER",qty:"130 G",cost:2.06},{name:"GRANULATED GARLIC",qty:"130 G",cost:0.84},{name:"CAYENNE",qty:"130 G",cost:1.09},{name:"TRANSGLUTAMINASE",qty:"170 G",cost:21.93},{name:"AJI",qty:"130 G",cost:2.00},{name:"SALT",qty:"55 G",cost:0.37},{name:"VACUUM BAG",qty:"9.3 EA",cost:2.27}]},
+  "CHEESE FILLING":{shift:"AM",ingredients:[{name:"CREAM CHEESE",qty:"24 LBS",cost:120.00},{name:"FETA",qty:"5 LBS",cost:28.50},{name:"MOZZARELLA",qty:"5 LBS",cost:17.50},{name:"GRUYERE",qty:"6 LBS",cost:57.00},{name:"ASIAGO",qty:"5 LBS",cost:82.90},{name:"BLACK PEPPER",qty:"1 OZ",cost:0.41},{name:"CORN STARCH",qty:"2 OZ",cost:0.29},{name:"GRANULATED GARLIC",qty:"75 G",cost:0.48},{name:"OREGANO",qty:"15 G",cost:0.16}]},
+  "HOLLANDAISE SAUCE":{shift:"AM",ingredients:[{name:"CHAMPAGNE VINEGAR",qty:"8 OZ",cost:1.22},{name:"BUTTER",qty:"4 LBS",cost:14.13},{name:"EGG YOLK",qty:"720 G",cost:6.34},{name:"SALT",qty:"1 OZ",cost:0.19},{name:"SUGAR",qty:"1 OZ",cost:0.05},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "POMODORO":{shift:"AM",ingredients:[{name:"CANNED TOMATO",qty:"6 EA",cost:34.50},{name:"SALT",qty:"165 G",cost:1.12},{name:"SUGAR",qty:"65 G",cost:0.12},{name:"CITRIC ACID",qty:"25 G",cost:0.23},{name:"OREGANO",qty:"20 G",cost:0.22},{name:"TOMATO PASTE",qty:"900 G",cost:2.50},{name:"OVT",qty:"960 G",cost:19.20},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "CILANTRO PLUM":{shift:"AM",ingredients:[{name:"GINGER",qty:"80 G",cost:0.39},{name:"SERRANO",qty:"70 G",cost:0.21},{name:"MINT",qty:"120 G",cost:3.80},{name:"CILANTRO",qty:"420 G",cost:6.78},{name:"CANOLA OIL",qty:"700 G",cost:1.61},{name:"SALT",qty:"15 G",cost:0.10},{name:"GROUND CUMIN",qty:"50 G",cost:0.66},{name:"GARLIC",qty:"100 G",cost:0.87},{name:"PLUM SAUCE",qty:"1 EA",cost:0.18},{name:"DISTILLED VINEGAR",qty:"140 G",cost:0.19},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "OVT":{shift:"AM",ingredients:[{name:"ROMA TOMATO",qty:"50 LBS",cost:80.00},{name:"EVOO",qty:"32 FL OZ",cost:21.18},{name:"OREGANO",qty:"8 OZ",cost:2.47},{name:"SALT",qty:"4 OZ",cost:0.77},{name:"SMALL VACUUM BAG",qty:"10 EA",cost:1.57}]},
+  "HARIRA SOUP":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"1500 G",cost:3.44},{name:"CHOPPED ONIONS",qty:"20 LBS",cost:25.00},{name:"CHOPPED CARROTS",qty:"15 LBS",cost:27.75},{name:"CHOPPED CELERY",qty:"15 LBS",cost:36.75},{name:"GARLIC",qty:"400 G",cost:3.48},{name:"LENTILS",qty:"3000 G",cost:10.04},{name:"CANNED TOMATO",qty:"5 EA",cost:28.75},{name:"CHICKEN STOCK",qty:"3 EA",cost:4.28},{name:"CILANTRO",qty:"7 EA",cost:3.21},{name:"LEMON JUICE",qty:"32 OZ",cost:3.22},{name:"GROUND CUMIN",qty:"520 G",cost:6.86},{name:"GROUND ANCHO",qty:"225 G",cost:3.08},{name:"SPANISH PAPRIKA",qty:"300 G",cost:3.26},{name:"BLACK PEPPER",qty:"75 G",cost:1.07},{name:"SALT",qty:"590 G",cost:3.99},{name:"WHOLE THYME",qty:"35 G",cost:0.38},{name:"CHICKEN BASE",qty:"150 G",cost:1.58},{name:"VACUUM BAG",qty:"13 EA",cost:3.17}]},
+  "CHICKEN BRINE":{shift:"AM",ingredients:[{name:"CUMIN SEED",qty:"450 G",cost:5.67},{name:"FENNEL SEED",qty:"450 G",cost:3.22},{name:"MUSTARD SEED",qty:"450 G",cost:2.05},{name:"GROUND CLOVE",qty:"110 G",cost:2.85},{name:"GROUND NUTMEG",qty:"55 G",cost:1.22},{name:"SALT",qty:"8 KG",cost:54.13},{name:"BROWN SUGAR",qty:"2.5 KG",cost:7.04},{name:"ROSEMARY",qty:"1 LBS",cost:7.50},{name:"GARLIC",qty:"5 LBS",cost:19.75},{name:"GINGER",qty:"5 LBS",cost:10.97},{name:"VACUUM BAG",qty:"8 EA",cost:1.95}]},
+  "KEFTA":{shift:"AM",ingredients:[{name:"LAMB FAT",qty:"4 KG",cost:38.47},{name:"BEEF CHUCK",qty:"19 KG",cost:292.31},{name:"WHOLE LIQUID EGG",qty:"3 LBS",cost:9.35},{name:"SALT",qty:"200 G",cost:1.35},{name:"GROUND CUMIN",qty:"120 G",cost:1.58},{name:"GRANULATED GARLIC",qty:"100 G",cost:0.64},{name:"GRANULATED ONION",qty:"100 G",cost:1.11},{name:"BLACK PEPPER",qty:"30 G",cost:0.43},{name:"AJI",qty:"60 G",cost:0.92},{name:"PANKO",qty:"500 G",cost:1.67},{name:"VACUUM BAG",qty:"4 EA",cost:0.98}]},
+  "RANCH":{shift:"AM",ingredients:[{name:"SOUR CREAM",qty:"10 LBS",cost:22.52},{name:"RANCH POWDER",qty:"3 EA",cost:8.33},{name:"AIOLI",qty:"10 LBS",cost:15.63},{name:"BUTTERMILK",qty:"32 OZ",cost:2.00},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "BANANA FOSTERS":{shift:"AM",ingredients:[{name:"BUTTER",qty:"4 LBS",cost:14.13},{name:"DARK BROWN SUGAR",qty:"2500 G",cost:17.06},{name:"CREAM",qty:"5600 G",cost:33.38},{name:"DARK SPICED RUM",qty:"24 FL OZ",cost:3.14},{name:"SALT",qty:"3 OZ",cost:0.58},{name:"CITRIC ACID",qty:"0.5 OZ",cost:0.13},{name:"VACUUM BAG",qty:"2 EA",cost:0.49}]},
+  "ANCHOVY SAUCE":{shift:"AM",ingredients:[{name:"EVOO",qty:"1 KG",cost:23.30},{name:"CHILI FLAKES",qty:"1 OZ",cost:0.25},{name:"GARLIC",qty:"1 KG",cost:8.69},{name:"ANCHOVY",qty:"56 OZ",cost:42.50},{name:"CHOPPED ONIONS",qty:"5 LBS",cost:6.25},{name:"OREGANO",qty:"1 OZ",cost:0.31},{name:"SMALL VACUUM BAG",qty:"5 EA",cost:0.78}]},
+  "PINK SAUCE":{shift:"AM",ingredients:[{name:"EVOO",qty:"1 KG",cost:23.30},{name:"GARLIC",qty:"200 G",cost:1.74},{name:"CHOPPED ONIONS",qty:"5 LBS",cost:6.25},{name:"TOMATO PASTE",qty:"2500 G",cost:6.94},{name:"VODKA",qty:"850 G",cost:7.47},{name:"BROWN SUGAR",qty:"110 G",cost:0.31},{name:"CITRIC ACID",qty:"10 G",cost:0.09},{name:"CREAM",qty:"8500 G",cost:50.67},{name:"CHICKEN BASE",qty:"250 G",cost:2.63},{name:"OREGANO",qty:"25 G",cost:0.27},{name:"OVT",qty:"600 G",cost:12.00},{name:"VACUUM BAG",qty:"3 EA",cost:0.73}]},
+  "APRICOT MUSTARD":{shift:"AM",ingredients:[{name:"HONEY",qty:"2 GAL",cost:122.24},{name:"APRICOTS",qty:"25 LBS",cost:155.00},{name:"SUGAR",qty:"4268 G",cost:7.80},{name:"SALT",qty:"730 G",cost:4.94},{name:"MUSTARD POWDER",qty:"2491 G",cost:54.83},{name:"CHICKEN BASE",qty:"550 G",cost:5.78},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "CHICKEN STOCK":{shift:"AM",ingredients:[{name:"CHICKEN BONE",qty:"40 LBS",cost:32.00},{name:"CHICKEN FEET",qty:"20 LBS",cost:35.00},{name:"WHOLE CARROTS",qty:"10 LBS",cost:9.56},{name:"WHOLE CELERY",qty:"4 EA",cost:6.25},{name:"WHOLE ONIONS",qty:"20 LBS",cost:8.60},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "GINGER DRESSING":{shift:"AM",ingredients:[{name:"RICE VINEGAR",qty:"1.25 GAL",cost:12.50},{name:"CANOLA OIL",qty:"1.25 GAL",cost:10.43},{name:"HONEY",qty:"25 LBS",cost:191.00},{name:"SOY SAUCE",qty:"1 GAL",cost:12.90},{name:"SESAME OIL",qty:"0.5 GAL",cost:24.50},{name:"PLUM SAUCE",qty:"0.25 GAL",cost:5.80},{name:"GINGER",qty:"0.25 GAL",cost:4.39},{name:"GARLIC",qty:"8 OZ",cost:1.98},{name:"SALT",qty:"460 G",cost:3.11},{name:"BLACK PEPPER",qty:"90 G",cost:1.29},{name:"CITRIC ACID",qty:"210 G",cost:1.96}]},
+  "CHILI":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"500 G",cost:1.15},{name:"BEEF CHUCK",qty:"60 LBS",cost:419.40},{name:"CHOPPED ONIONS",qty:"20 LBS",cost:25.00},{name:"BEEF BASE",qty:"2 LBS",cost:13.17},{name:"WORCESTERSHIRE",qty:"700 G",cost:2.50},{name:"CANNED TOMATO",qty:"2 EA",cost:11.50},{name:"KETCHUP",qty:"1 EA",cost:11.83},{name:"RED WINE",qty:"3 L",cost:3.00},{name:"ACHIOTE",qty:"1 EA",cost:6.25},{name:"CORN STARCH",qty:"250 G",cost:1.26},{name:"GROUND ANCHO",qty:"220 G",cost:3.01},{name:"GROUND GUAJILLO",qty:"220 G",cost:3.72},{name:"GROUND CHIPOTLE",qty:"220 G",cost:3.78},{name:"BLACK PEPPER",qty:"35 G",cost:0.50},{name:"SALT",qty:"90 G",cost:0.61},{name:"WHOLE THYME",qty:"45 G",cost:0.49},{name:"AJI",qty:"10 G",cost:0.15},{name:"BROWN SUGAR",qty:"140 G",cost:0.39},{name:"GROUND CUMIN",qty:"85 G",cost:1.12},{name:"VACUUM BAG",qty:"10 EA",cost:2.44}]},
+  "CLW SAUCE":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"800 G",cost:1.84},{name:"GINGER",qty:"600 G",cost:2.90},{name:"GARLIC",qty:"700 G",cost:6.09},{name:"SOY SAUCE",qty:"5000 G",cost:17.75},{name:"BROWN SUGAR",qty:"3600 G",cost:10.14},{name:"SWEET SOY",qty:"3200 G",cost:36.39},{name:"CORN STARCH",qty:"225 G",cost:1.13},{name:"BLACK PEPPER",qty:"150 G",cost:2.15},{name:"RICE VINEGAR",qty:"1400 G",cost:3.85},{name:"WORCESTERSHIRE",qty:"2000 G",cost:7.15},{name:"VACUUM BAG",qty:"3 EA",cost:0.73}]},
+  "BEEF STOCK":{shift:"AM",ingredients:[{name:"BEEF BONES",qty:"40 LBS",cost:59.60},{name:"WHOLE ONIONS",qty:"15 LBS",cost:6.45},{name:"WHOLE CARROTS",qty:"7 LBS",cost:6.69},{name:"WHOLE CELERY",qty:"4 EA",cost:6.25},{name:"GARLIC",qty:"16 OZ",cost:3.95},{name:"CANNED TOMATO",qty:"1 EA",cost:5.75},{name:"TOMATO PASTE",qty:"1.5 KG",cost:4.17}]},
+  "HUMMUS":{shift:"AM",ingredients:[{name:"CHICKPEAS",qty:"19 KG",cost:12.22},{name:"TAHINI",qty:"3.5 KG",cost:18.48},{name:"GARLIC",qty:"140 G",cost:1.22},{name:"SALT",qty:"330 G",cost:2.23},{name:"GROUND CUMIN",qty:"85 G",cost:1.12},{name:"CITRIC ACID",qty:"130 G",cost:1.21},{name:"VACUUM BAG",qty:"4 EA",cost:0.98}]},
+  "ONION MIX":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"2500 G",cost:5.74},{name:"CHOPPED ONIONS",qty:"100 LBS",cost:125.00},{name:"SALT",qty:"4166 G",cost:28.19},{name:"WHOLE THYME",qty:"35 G",cost:0.38},{name:"SUGAR",qty:"6786 G",cost:12.40},{name:"GROUND CUMIN",qty:"750 G",cost:9.89},{name:"CHICKEN BASE",qty:"655 G",cost:6.88},{name:"TURMERIC",qty:"174 G",cost:1.13},{name:"VACUUM BAG",qty:"8 EA",cost:1.95}]},
+  "BRUSSEL SAUCE":{shift:"AM",ingredients:[{name:"SHERRY VINEGAR",qty:"4 GAL",cost:84.20},{name:"SUGAR",qty:"50 LBS",cost:41.50},{name:"SOY SAUCE",qty:"15 L",cost:51.12},{name:"VACUUM BAG",qty:"6 EA",cost:1.46}]},
+  "SPICED BEEF FAT":{shift:"AM",ingredients:[{name:"BEEF TALLOW",qty:"100 LBS",cost:214.00},{name:"SALT",qty:"1690 G",cost:11.43},{name:"GROUND ANCHO",qty:"845 G",cost:11.57},{name:"GRANULATED GARLIC",qty:"1410 G",cost:9.09},{name:"GRANULATED ONION",qty:"1410 G",cost:15.70},{name:"SMOKED PAPRIKA",qty:"1410 G",cost:15.70},{name:"GROUND CHIPOTLE",qty:"845 G",cost:14.51},{name:"GROUND CLOVE",qty:"170 G",cost:4.41},{name:"BROWN SUGAR",qty:"5410 G",cost:15.24},{name:"OREGANO",qty:"422 G",cost:4.59},{name:"CITRIC ACID",qty:"255 G",cost:2.37},{name:"GROUND NUTMEG",qty:"170 G",cost:3.78},{name:"VACUUM BAG",qty:"10 EA",cost:2.44}]},
+  "VEGAN MAYO":{shift:"AM",ingredients:[{name:"CANOLA OIL",qty:"4 GAL",cost:33.37},{name:"SALT",qty:"2 OZ",cost:0.38},{name:"CITRIC ACID",qty:"1.5 OZ",cost:0.40},{name:"AJI",qty:"25 G",cost:0.38},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "CACIO PEPE":{shift:"AM",ingredients:[{name:"EGG YOLK",qty:"1816 G",cost:15.99},{name:"CREAM",qty:"2 GAL",cost:43.33},{name:"MILK",qty:"1 GAL",cost:6.25},{name:"GRANA AMERICANA",qty:"5200 G",cost:72.29},{name:"BLACK PEPPER",qty:"2 OZ",cost:0.81},{name:"SALT",qty:"3 OZ",cost:0.58},{name:"CHICKEN BASE",qty:"6 OZ",cost:1.79},{name:"VACUUM BAG",qty:"1 EA",cost:0.24}]},
+  "TARRAGON PESTO":{shift:"AM",ingredients:[{name:"TARRAGON",qty:"100 G",cost:3.58},{name:"BASIL",qty:"230 G",cost:3.98},{name:"EVOO",qty:"500 G",cost:11.65},{name:"GARLIC",qty:"75 G",cost:0.65},{name:"SALT",qty:"0.5 OZ",cost:0.10},{name:"SMALL VACUUM BAG",qty:"1 EA",cost:0.16}]},
+  "SHAKING BEEF SAUCE":{shift:"AM",ingredients:[{name:"OYSTER SAUCE",qty:"800 G",cost:7.12},{name:"SOY SAUCE",qty:"600 G",cost:2.13},{name:"MAGGIES",qty:"300 G",cost:5.08},{name:"BLACK PEPPER",qty:"60 G",cost:0.86},{name:"FISH SAUCE",qty:"660 G",cost:7.63},{name:"BROWN SUGAR",qty:"840 G",cost:2.37},{name:"GARLIC",qty:"200 G",cost:1.74},{name:"VACUUM BAG",qty:"2 EA",cost:0.49}]},
+  "VEGAN GARLIC SAUCE":{shift:"PM",ingredients:[{name:"GARLIC",qty:"400 G",cost:3.48},{name:"DISTILLED VINEGAR",qty:"470 G",cost:0.65},{name:"LEMON JUICE",qty:"340 G",cost:1.20},{name:"OREGANO",qty:"40 G",cost:0.43},{name:"BLACK PEPPER",qty:"50 G",cost:0.72},{name:"SALT",qty:"50 G",cost:0.34},{name:"VEGAN MAYO",qty:"10830 G",cost:27.11}]},
+  "HARISSA AIOLI":{shift:"PM",ingredients:[{name:"MAYONNAISE",qty:"4 GAL",cost:52.80},{name:"SMOKED PAPRIKA",qty:"227 G",cost:2.53},{name:"GROUND CUMIN",qty:"90 G",cost:1.19},{name:"LEMON JUICE",qty:"570 G",cost:2.02},{name:"GARLIC",qty:"605 G",cost:5.26},{name:"SALT",qty:"114 G",cost:0.77}]},
+  "POTATO SALAD DRESSING":{shift:"PM",ingredients:[{name:"MAYONNAISE",qty:"3780 G",cost:13.73},{name:"SUGAR",qty:"100 G",cost:0.18},{name:"LEMON JUICE",qty:"190 G",cost:0.67},{name:"DISTILLED VINEGAR",qty:"280 G",cost:0.39},{name:"GARLIC",qty:"180 G",cost:1.56},{name:"SALT",qty:"54 G",cost:0.37}]}
+};
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let currentLocation = null;
+let isCommissary = false;
+let editing = false;
+let openRecipe = null;
+let tempMode = '';
+let modalCallback = null;  // for temp modal
+
+// FIX Bug2/3: callback registry for cooling log buttons (avoids inline function strings)
+const _cpCallbacks = {};
+
+// ── RECIPE STATE ──
+let editingRecipeName = null;  // null = not editing; string = name of recipe being edited; '' = new recipe
+let customRecipes = {};        // loaded from localStorage
+
+// ══════════════════════════════════════════════════════════
+//  STORAGE HELPERS
+// ══════════════════════════════════════════════════════════
+function lsKey(k) { return 'kp_' + (isCommissary ? 'commissary' : currentLocation) + '_' + k; }
+function load(k, def) { try { const v = localStorage.getItem(lsKey(k)); return v !== null ? JSON.parse(v) : def; } catch(e) { return def; } }
+function save(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
+
+function loadLogs() { try { const v = localStorage.getItem('kp_all_logs'); return v ? JSON.parse(v) : []; } catch(e) { return []; } }
+function saveLogs(logs) { try { localStorage.setItem('kp_all_logs', JSON.stringify(logs)); } catch(e) {} }
+
+function loadPars() { try { const v = localStorage.getItem('kp_global_pars'); return v ? JSON.parse(v) : {}; } catch(e) { return {}; } }
+function saveParsGlobal(p) { try { localStorage.setItem('kp_global_pars', JSON.stringify(p)); } catch(e) {} }
+
+function loadCustomRecipes() { try { const v = localStorage.getItem('kp_custom_recipes'); return v ? JSON.parse(v) : {}; } catch(e) { return {}; } }
+function saveCustomRecipes(r) { try { localStorage.setItem('kp_custom_recipes', JSON.stringify(r)); } catch(e) {} }
+
+// Merged recipe list (base + custom, custom overrides base)
+function getAllRecipes() {
+  return Object.assign({}, BASE_RECIPES, customRecipes);
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════
+function loginLocation(loc) {
+  currentLocation = loc; isCommissary = false;
+  document.getElementById('tab-pars').classList.add('hidden');
+  launchApp();
+}
+
+function loginCommissary() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === COMMISSARY_PIN) {
+    currentLocation = 'Commissary'; isCommissary = true;
+    document.getElementById('tab-pars').classList.remove('hidden');
+    launchApp();
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+  }
+}
+document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') loginCommissary(); });
+
+function logout() {
+  currentLocation = null; isCommissary = false; editing = false;
+  openRecipe = null; editingRecipeName = null;
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  document.getElementById('login-screen').classList.add('active');
+  document.getElementById('app-screen').classList.remove('active');
+}
+
+function launchApp() {
+  customRecipes = loadCustomRecipes();
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  document.getElementById('loc-name').textContent = currentLocation;
+  document.getElementById('loc-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  showTab('counts');
+}
+
+// ══════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + tab));
+  if (tab === 'counts') renderCounts();
+  if (tab === 'recipes') { editingRecipeName = null; renderRecipes(); }
+  if (tab === 'temp') renderTempPane();
+  if (tab === 'pars') renderPars();
+}
+
+// ══════════════════════════════════════════════════════════
+//  COUNTS
+// ══════════════════════════════════════════════════════════
+function renderCounts(filter = '') {
+  const counts = load('counts', {});
+  const pars = loadPars();
+  const list = document.getElementById('count-list');
+  const btn = document.getElementById('edit-btn');
+  btn.textContent = editing ? 'Save' : 'Update';
+  btn.className = 'action-btn' + (editing ? ' green' : '');
+  const items = PRODUCTS.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
+  list.innerHTML = items.map(p => {
+    const cnt = counts[p] !== undefined ? counts[p] : null;
+    const par = pars[p] || null;
+    const low = par !== null && cnt !== null && cnt < par;
+    const cntTxt = cnt !== null ? cnt + ' bags' : '—';
+    // use data-product attribute instead of ID to avoid space issues
+    return `<div class="product-row">
+      <div class="product-name">${p}</div>
+      <div class="count-right">
+        <div class="static-wrap ${editing ? 'gone' : ''}">
+          <div class="count-val">${cntTxt}</div>
+          <div class="par-label ${low ? 'par-low' : (par ? 'par-ok' : '')}">${par !== null ? 'Par: '+par : 'Par: —'}</div>
+        </div>
+        <div class="editor-wrap ${editing ? 'on' : ''}">
+          <input class="count-input" type="number" min="0" placeholder="0"
+            value="${cnt !== null ? cnt : ''}"
+            data-product="${p.replace(/"/g,'&quot;')}"
+            onchange="setCount(this.dataset.product,this.value)"
+            oninput="setCount(this.dataset.product,this.value)">
+          <span class="unit-tag">bags</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCounts(v) { renderCounts(v); }
+
+function setCount(p, v) {
+  const counts = load('counts', {});
+  const n = parseFloat(v);
+  if (!isNaN(n) && n >= 0) counts[p] = n; else delete counts[p];
+  save('counts', counts);
+}
+
+function toggleEditing() {
+  editing = !editing;
+  if (!editing) toast('Counts saved ✓');
+  renderCounts(document.querySelector('#pane-counts .search-input').value);
+}
+
+// ══════════════════════════════════════════════════════════
+//  RECIPES
+// ══════════════════════════════════════════════════════════
+function renderRecipes(filter = '') {
+  const RECIPES = getAllRecipes();
+  const list = document.getElementById('recipe-list');
+
+  if (editingRecipeName !== null) {
+    // Show recipe editor
+    list.innerHTML = recipeEditorHTML(editingRecipeName);
+    return;
+  }
+
+  const keys = Object.keys(RECIPES).filter(k => k.toLowerCase().includes(filter.toLowerCase()));
+  const html = keys.map(name => {
+    const r = RECIPES[name];
+    const isCustom = customRecipes.hasOwnProperty(name);
+    const rdId = 'rd-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+    return `<div>
+      <div class="recipe-card" onclick="toggleRecipe('${name.replace(/'/g,"\\'")}')">
+        <div class="rc-header">
+          <div>
+            <div class="rc-name">${name}${isCustom ? '<span class="recipe-custom-badge">CUSTOM</span>' : ''}</div>
+            <div class="rc-shift">${r.shift} SHIFT</div>
+          </div>
+        </div>
+        ${isCommissary ? `<div class="rc-actions" onclick="event.stopPropagation()">
+          <button class="rc-edit-btn" onclick="startEditRecipe('${name.replace(/'/g,"\\'")}')">✎ Edit</button>
+          ${isCustom ? `<button class="rc-edit-btn" style="color:var(--danger)" onclick="confirmDeleteRecipe('${name.replace(/'/g,"\\'")}')">✕ Delete</button>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="recipe-detail" id="${rdId}">
+        <div class="detail-head"><span>Ingredient</span><span>Qty</span></div>
+        ${r.ingredients.map(i => `<div class="detail-row">
+          <span>${i.name}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--text2)">${i.qty}</span>
+        </div>`).join('')}
+        ${r.process ? `<div class="detail-process">
+          <div class="detail-process-lbl">PROCESS & NOTES</div>
+          <div class="detail-process-text">${r.process.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = html + (isCommissary ? `<button class="add-recipe-btn" onclick="startNewRecipe()">+ Add New Recipe</button>` : '') + '<div class="bottom-pad"></div>';
+}
+
+function filterRecipes(v) { openRecipe = null; renderRecipes(v); }
+
+function toggleRecipe(name) {
+  const id = 'rd-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (openRecipe && openRecipe !== name) {
+    const prevId = 'rd-' + openRecipe.replace(/[^a-zA-Z0-9]/g, '_');
+    const prev = document.getElementById(prevId);
+    if (prev) prev.classList.remove('open');
+  }
+  el.classList.toggle('open');
+  openRecipe = el.classList.contains('open') ? name : null;
+  if (el.classList.contains('open')) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── RECIPE EDITOR ──
+function startNewRecipe() {
+  editingRecipeName = '';
+  openRecipe = null;
+  renderRecipes();
+}
+
+function startEditRecipe(name) {
+  editingRecipeName = name;
+  openRecipe = null;
+  renderRecipes();
+}
+
+function recipeEditorHTML(name) {
+  const RECIPES = getAllRecipes();
+  const isNew = name === '';
+  const r = isNew ? {shift:'AM', ingredients:[{name:'',qty:'',cost:0}]} : JSON.parse(JSON.stringify(RECIPES[name]));
+  const ings = r.ingredients;
+  const processVal = (r.process || '').replace(/"/g,'&quot;');
+
+  const ingRows = ings.map((ing, i) => `
+    <div class="re-row" data-idx="${i}">
+      <input class="re-fi" type="text" placeholder="Ingredient" value="${ing.name.replace(/"/g,'&quot;')}" data-field="name" data-idx="${i}" oninput="updateEditorIng(${i},'name',this.value)">
+      <input class="re-fi" type="text" placeholder="Qty" value="${ing.qty.replace(/"/g,'&quot;')}" data-field="qty" data-idx="${i}" oninput="updateEditorIng(${i},'qty',this.value)">
+      <button class="re-del-btn" onclick="removeEditorIng(${i})" title="Remove">×</button>
+    </div>`).join('');
+
+  return `<div class="recipe-editor">
+    <div class="re-header">
+      <div class="re-title">${isNew ? 'New Recipe' : 'Edit: '+name}</div>
+    </div>
+    <div class="re-body">
+      <div class="re-section">RECIPE NAME</div>
+      <input class="re-fi" type="text" id="re-name" placeholder="Recipe name" value="${isNew ? '' : name.replace(/"/g,'&quot;')}" style="margin-bottom:10px">
+
+      <div class="re-section">SHIFT</div>
+      <select class="re-fi" id="re-shift" style="margin-bottom:10px">
+        <option value="AM" ${r.shift==='AM'?'selected':''}>AM</option>
+        <option value="PM" ${r.shift==='PM'?'selected':''}>PM</option>
+        <option value="BOTH" ${r.shift==='BOTH'?'selected':''}>BOTH</option>
+      </select>
+
+      <div class="re-section">INGREDIENTS</div>
+      <div class="re-row-head">
+        <span>INGREDIENT</span><span>QTY</span><span></span>
+      </div>
+      <div id="re-ing-list">${ingRows}</div>
+      <button class="re-add-ing-btn" onclick="addEditorIng()">+ Add Ingredient</button>
+
+      <div class="re-section" style="margin-top:18px">PROCESS & NOTES</div>
+      <textarea class="re-process" id="re-process" placeholder="Describe the preparation method, steps, timing, temperature targets, storage notes…">${processVal}</textarea>
+
+      <div class="re-footer">
+        <button class="re-cancel" onclick="cancelEditRecipe()">Cancel</button>
+        ${!isNew && customRecipes.hasOwnProperty(name) ? `<button class="re-delete" onclick="confirmDeleteRecipe('${name.replace(/'/g,"\\'")}')">Delete</button>` : ''}
+        <button class="re-save" onclick="saveEditorRecipe('${name.replace(/'/g,"\\'")}',${isNew})">Save Recipe</button>
+      </div>
+    </div>
+  </div><div class="bottom-pad"></div>`;
+}
+
+// In-memory editor state (separate from DOM to avoid re-render losing focus)
+let _editorIngs = [];
+
+function startEditorState(name) {
+  const RECIPES = getAllRecipes();
+  const isNew = name === '';
+  _editorIngs = isNew ? [{name:'',qty:''}]
+    : JSON.parse(JSON.stringify(RECIPES[name].ingredients));
+}
+
+function updateEditorIng(i, field, val) {
+  if (!_editorIngs[i]) return;
+  _editorIngs[i][field] = field === 'cost' ? parseFloat(val)||0 : val;
+}
+
+function addEditorIng() {
+  // Read current values from DOM before re-render
+  syncEditorIngsFromDOM();
+  _editorIngs.push({name:'',qty:''});
+  redrawIngList();
+}
+
+function removeEditorIng(i) {
+  syncEditorIngsFromDOM();
+  _editorIngs.splice(i, 1);
+  if (_editorIngs.length === 0) _editorIngs = [{name:'',qty:''}];
+  redrawIngList();
+}
+
+function syncEditorIngsFromDOM() {
+  const rows = document.querySelectorAll('#re-ing-list .re-row');
+  rows.forEach(row => {
+    const idx = parseInt(row.dataset.idx);
+    const nameEl = row.querySelector('[data-field="name"]');
+    const qtyEl = row.querySelector('[data-field="qty"]');
+    if (nameEl) _editorIngs[idx] = {
+      name: nameEl.value,
+      qty: qtyEl ? qtyEl.value : ''
+    };
+  });
+}
+
+function redrawIngList() {
+  const container = document.getElementById('re-ing-list');
+  if (!container) return;
+  container.innerHTML = _editorIngs.map((ing, i) => `
+    <div class="re-row" data-idx="${i}">
+      <input class="re-fi" type="text" placeholder="Ingredient" value="${(ing.name||'').replace(/"/g,'&quot;')}" data-field="name" data-idx="${i}" oninput="updateEditorIng(${i},'name',this.value)">
+      <input class="re-fi" type="text" placeholder="Qty" value="${(ing.qty||'').replace(/"/g,'&quot;')}" data-field="qty" data-idx="${i}" oninput="updateEditorIng(${i},'qty',this.value)">
+      <button class="re-del-btn" onclick="removeEditorIng(${i})" title="Remove">×</button>
+    </div>`).join('');
+}
+
+// Called when recipe editor is first rendered
+function initEditorState() {
+  startEditorState(editingRecipeName);
+}
+
+// Override renderRecipes to init state after DOM render
+const _origRenderRecipes = renderRecipes;
+// (instead, we call initEditorState inline — see below)
+
+function cancelEditRecipe() {
+  editingRecipeName = null;
+  _editorIngs = [];
+  renderRecipes(document.querySelector('#pane-recipes .search-input').value);
+}
+
+function saveEditorRecipe(originalName, isNew) {
+  // sync ingredients from DOM
+  syncEditorIngsFromDOM();
+
+  const nameEl = document.getElementById('re-name');
+  const shiftEl = document.getElementById('re-shift');
+  if (!nameEl || !shiftEl) return;
+
+  const processEl = document.getElementById('re-process');
+  const newName = nameEl.value.trim().toUpperCase();
+  const shift = shiftEl.value;
+  const process = processEl ? processEl.value.trim() : '';
+
+  if (!newName) { toast('Enter a recipe name'); return; }
+  if (_editorIngs.length === 0 || !_editorIngs.some(i => i.name.trim())) {
+    toast('Add at least one ingredient'); return;
+  }
+
+  // Clean up blank ingredient rows
+  const ingredients = _editorIngs.filter(i => i.name.trim() !== '');
+  if (ingredients.length === 0) { toast('Add at least one ingredient'); return; }
+
+  // If renaming, remove old entry
+  if (!isNew && originalName && originalName !== newName) {
+    delete customRecipes[originalName];
+    // If it was a base recipe being "edited under a new name", old base stays untouched
+  }
+
+  customRecipes[newName] = { shift, ingredients, process };
+  saveCustomRecipes(customRecipes);
+
+  editingRecipeName = null;
+  _editorIngs = [];
+  toast((isNew ? 'Recipe added' : 'Recipe updated') + ' ✓');
+  renderRecipes();
+}
+
+function confirmDeleteRecipe(name) {
+  showConfirm(
+    'Delete Recipe?',
+    `"${name}" will be permanently removed.`,
+    () => deleteRecipe(name)
+  );
+}
+
+function deleteRecipe(name) {
+  delete customRecipes[name];
+  saveCustomRecipes(customRecipes);
+  if (editingRecipeName === name) editingRecipeName = null;
+  toast('Recipe deleted');
+  renderRecipes();
+}
+
+// Patch renderRecipes to init editor state when editing
+const __renderRecipes = renderRecipes;
+// We handle it inside renderRecipes directly by calling initEditorState
+// after the innerHTML is set (below, we modify renderRecipes):
+// (Already handled in the function body — after setting list.innerHTML for editor, we call initEditorState)
+
+// ══════════════════════════════════════════════════════════
+//  TEMP LOG
+// ══════════════════════════════════════════════════════════
+function renderTempPane() {
+  const strip = document.getElementById('mode-strip');
+  if (isCommissary) {
+    strip.innerHTML = `
+      <button class="mode-pill" data-mode="production" onclick="setMode('production')">Production</button>
+      <button class="mode-pill" data-mode="cooling" onclick="setMode('cooling')">Cooling Log</button>
+      <button class="mode-pill" data-mode="history" onclick="setMode('history')">History</button>`;
+    setMode('production');
+  } else {
+    strip.innerHTML = `
+      <button class="mode-pill" data-mode="receiving" onclick="setMode('receiving')">Receiving</button>
+      <button class="mode-pill" data-mode="history" onclick="setMode('history')">History</button>`;
+    setMode('receiving');
+  }
+}
+
+// FIX Bug1: compare data-mode attribute directly against mode string
+function setMode(m) {
+  tempMode = m;
+  document.querySelectorAll('.mode-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === m);
+  });
+  renderTempBody();
+}
+
+function renderTempBody() {
+  const body = document.getElementById('temp-body');
+  if (tempMode === 'production') body.innerHTML = productionForm();
+  else if (tempMode === 'cooling') body.innerHTML = coolingLog();
+  else if (tempMode === 'receiving') body.innerHTML = receivingForm();
+  else if (tempMode === 'history') body.innerHTML = historyView();
+}
+
+function productionForm() {
+  return `<div class="log-form">
+    <h3>LOG PRODUCTION</h3>
+    <div class="fg"><label>Product</label>
+      <select class="fs" id="prod-item">${PRODUCTS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+    <div class="two-col">
+      <div class="fg"><label>Cook Temp (°F)</label><input class="fi" id="prod-cook" type="number" placeholder="165"></div>
+      <div class="fg"><label>Batch (bags)</label><input class="fi" id="prod-batch" type="number" placeholder="4"></div>
+    </div>
+    <div class="fg"><label>Notes</label><input class="fi" id="prod-notes" type="text" placeholder="Optional"></div>
+    <button class="submit-btn" onclick="logProduction()">Start Cooling Log</button>
+  </div>`;
+}
+
+function logProduction() {
+  const item = document.getElementById('prod-item').value;
+  const cook = parseFloat(document.getElementById('prod-cook').value);
+  const batch = document.getElementById('prod-batch').value;
+  const notes = document.getElementById('prod-notes').value;
+  const logs = loadLogs();
+  const now = new Date();
+  const entry = {
+    id: Date.now(),
+    type: 'production',
+    location: 'Commissary',
+    product: item,
+    cookTemp: isNaN(cook) ? null : cook,
+    batch: batch || null,
+    notes: notes || null,
+    // FIX Bug5: bagged checkpoint due is now+15min, not now (so it doesn't instantly show overdue)
+    bagged: { time: new Date(now.getTime()+15*60000).toISOString(), temp: null },
+    check2h: { time: new Date(now.getTime()+2*3600000).toISOString(), temp: null },
+    check6h: { time: new Date(now.getTime()+6*3600000).toISOString(), temp: null },
+    timestamp: now.toISOString()
+  };
+  logs.unshift(entry);
+  saveLogs(logs);
+  scheduleNotification(item, 2, entry.id);
+  scheduleNotification(item, 6, entry.id);
+  toast('Production logged — cooling checkpoints set');
+  setMode('cooling');
+}
+
+function scheduleNotification(product, hours, id) {
+  if (!('Notification' in window)) return;
+  const ms = hours * 3600000;
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      setTimeout(() => {
+        new Notification('🌡️ Cooling Check', {
+          body: `${product} — ${hours}hr temp check due now`,
+          tag: `cp-${id}-${hours}`
+        });
+      }, ms);
+    }
+  });
+}
+
+function coolingLog() {
+  const logs = loadLogs().filter(e => e.type === 'production' && e.location === 'Commissary');
+  if (!logs.length) return '<div class="empty-state">No active cooling logs.<br>Start a production entry first.</div>';
+  const recent = logs.slice(0, 15);
+  return '<div style="padding:12px 0">' + recent.map(e => {
+    const steps = [
+      {key:'bagged', label:'Bagged', targetTime: e.bagged?.time},
+      {key:'check2h', label:'2 Hr', targetTime: e.check2h?.time},
+      {key:'check6h', label:'6 Hr', targetTime: e.check6h?.time}
+    ];
+    const dt = new Date(e.timestamp);
+    return `<div class="checkpoint-card">
+      <div class="cp-header">
+        <div><div class="cp-name">${e.product}</div><div class="cp-date">${fmtDT(dt)}${e.batch?' · '+e.batch+' bags':''}</div></div>
+        ${e.cookTemp ? `<div class="cp-logged ${tempClass(e.cookTemp,'cook')}">${e.cookTemp}°F cook</div>` : ''}
+      </div>
+      <div class="cp-steps">
+        ${steps.map(s => {
+          const logged = e[s.key]?.temp !== null && e[s.key]?.temp !== undefined;
+          const temp = e[s.key]?.temp;
+          const due = new Date(s.targetTime);
+          const overdue = !logged && new Date() > due;
+          // FIX Bug2/3: register callback in _cpCallbacks instead of inline function string
+          const cbKey = `${e.id}_${s.key}`;
+          if (!logged) {
+            _cpCallbacks[cbKey] = (t) => logCheckpoint(e.id, s.key, t);
+          }
+          return `<div class="cp-step">
+            <div class="cp-step-label">${s.label}</div>
+            <div class="cp-step-content">
+              ${logged
+                ? `<div class="cp-logged ${tempClass(temp,'cool')}">${temp}°F</div><div class="cp-due">${fmtDT(due)}</div>`
+                : `<div class="cp-due ${overdue?'temp-danger':''}">Due ${fmtDT(due)}</div>`}
+            </div>
+            ${!logged
+              ? `<button class="cp-log-btn" onclick="openModal('Log ${s.label} Temp','${e.product} — ${fmtDT(due)}',_cpCallbacks['${cbKey}'])">Log °F</button>`
+              : `<button class="cp-log-btn done">✓</button>`}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function logCheckpoint(id, key, temp) {
+  const logs = loadLogs();
+  const entry = logs.find(e => e.id === id);
+  if (entry) { entry[key].temp = temp; saveLogs(logs); }
+  toast('Temp logged ✓');
+  renderTempBody();
+}
+
+function receivingForm() {
+  return `<div class="log-form">
+    <h3>LOG RECEIVED PRODUCT</h3>
+    <div class="fg"><label>Product</label>
+      <select class="fs" id="recv-item">${PRODUCTS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+    <div class="two-col">
+      <div class="fg"><label>Received Temp (°F)</label><input class="fi" id="recv-temp" type="number" placeholder="38"></div>
+      <div class="fg"><label>Qty (bags)</label><input class="fi" id="recv-qty" type="number" placeholder="2"></div>
+    </div>
+    <div class="fg"><label>Received By</label><input class="fi" id="recv-by" type="text" placeholder="Name"></div>
+    <div class="fg"><label>Notes</label><input class="fi" id="recv-notes" type="text" placeholder="Optional"></div>
+    <button class="submit-btn" onclick="logReceiving()">Log Entry</button>
+  </div>`;
+}
+
+function logReceiving() {
+  const item = document.getElementById('recv-item').value;
+  const temp = parseFloat(document.getElementById('recv-temp').value);
+  const qty = document.getElementById('recv-qty').value;
+  const by = document.getElementById('recv-by').value;
+  const notes = document.getElementById('recv-notes').value;
+
+  if (!by.trim()) { toast('Enter your name'); return; }
+
+  const logs = loadLogs();
+  logs.unshift({
+    id: Date.now(),
+    type: 'receiving',
+    location: currentLocation,
+    product: item,
+    // FIX Bug7: use != null check (not ||) so temp 0 is preserved
+    temp: isNaN(temp) ? null : temp,
+    qty: qty || null,
+    receivedBy: by || null,
+    notes: notes || null,
+    timestamp: new Date().toISOString()
+  });
+  saveLogs(logs);
+  // FIX Bug6: clear form and show confirmation state
+  toast('Receiving log saved ✓');
+  renderTempBody(); // re-render the form to clear all fields
+}
+
+function historyView() {
+  const allLogs = loadLogs();
+  const logs = isCommissary ? allLogs : allLogs.filter(e => e.location === currentLocation);
+  const html = `<div class="export-bar">
+    <button class="export-btn" onclick="exportXLSX()">⬇ Download .xlsx</button>
+  </div>` + (logs.length === 0 ? '<div class="empty-state">No entries yet.</div>' :
+    logs.slice(0, 60).map(e => {
+      if (e.type === 'production') {
+        const stages = [
+          // FIX Bug7: use != null so temp 0 is shown
+          e.bagged?.temp != null ? `Bagged ${e.bagged.temp}°F` : null,
+          e.check2h?.temp != null ? `2hr ${e.check2h.temp}°F` : null,
+          e.check6h?.temp != null ? `6hr ${e.check6h.temp}°F` : null
+        ].filter(Boolean).join(' · ');
+        return `<div class="hist-entry">
+          <div class="hist-header">
+            <div><div class="hist-name">${e.product}</div><div class="hist-meta">Commissary · ${fmtDT(new Date(e.timestamp))}</div></div>
+            ${e.cookTemp != null ? `<div class="hist-temp ${tempClass(e.cookTemp,'cook')}">${e.cookTemp}°F</div>` : ''}
+          </div>
+          ${stages ? `<div class="hist-meta" style="margin-top:4px">${stages}</div>` : ''}
+        </div>`;
+      } else {
+        return `<div class="hist-entry recv">
+          <div class="hist-header">
+            <div><div class="hist-name">${e.product}</div><div class="hist-meta">${e.location} · ${fmtDT(new Date(e.timestamp))}${e.receivedBy?' · '+e.receivedBy:''}</div></div>
+            ${e.temp != null ? `<div class="hist-temp ${tempClass(e.temp,'cool')}">${e.temp}°F</div>` : ''}
+          </div>
+          ${e.qty ? `<div class="hist-meta">${e.qty} bags${e.notes?' · '+e.notes:''}</div>` : ''}
+        </div>`;
+      }
+    }).join(''));
+  return html + '<div class="bottom-pad"></div>';
+}
+
+// ══════════════════════════════════════════════════════════
+//  SET PARS (commissary only)
+// ══════════════════════════════════════════════════════════
+// FIX Bug4: use data-product attribute instead of ID with spaces
+function renderPars(filter = '') {
+  const pars = loadPars();
+  const items = PRODUCTS.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
+  document.getElementById('par-list').innerHTML = items.map(p =>
+    `<div class="par-row">
+      <div class="par-name">${p}</div>
+      <input class="par-field" data-product="${p.replace(/"/g,'&quot;')}" type="number" min="0" placeholder="—" value="${pars[p] !== undefined ? pars[p] : ''}">
+    </div>`
+  ).join('') + '<div class="bottom-pad"></div>';
+}
+
+function filterPars(v) { renderPars(v); }
+
+function savePars() {
+  const pars = loadPars();
+  // FIX Bug4: query by data attribute instead of ID
+  document.querySelectorAll('#par-list .par-field').forEach(el => {
+    const p = el.dataset.product;
+    const n = parseFloat(el.value);
+    if (!isNaN(n) && n >= 0) pars[p] = n; else delete pars[p];
+  });
+  saveParsGlobal(pars);
+  toast('Par levels saved ✓');
+}
+
+// ══════════════════════════════════════════════════════════
+//  TEMP INPUT MODAL
+// ══════════════════════════════════════════════════════════
+function openModal(title, sub, cb) {
+  modalCallback = cb;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-sub').textContent = sub;
+  document.getElementById('modal-temp').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-temp').focus(), 100);
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); modalCallback = null; }
+function saveModalTemp() {
+  const v = parseFloat(document.getElementById('modal-temp').value);
+  if (isNaN(v)) { toast('Enter a temperature'); return; }
+  if (modalCallback) modalCallback(v);
+  closeModal();
+}
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+document.getElementById('modal-temp').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveModalTemp();
+});
+
+// ══════════════════════════════════════════════════════════
+//  CONFIRM DIALOG
+// ══════════════════════════════════════════════════════════
+let _confirmCallback = null;
+function showConfirm(title, msg, cb) {
+  _confirmCallback = cb;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); _confirmCallback = null; }
+document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+  if (_confirmCallback) _confirmCallback();
+  closeConfirm();
+});
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════════════
+function exportXLSX() {
+  const allLogs = loadLogs();
+  const wb = XLSX.utils.book_new();
+  // Production sheet
+  const prod = [['Date','Time','Product','Cook Temp (°F)','Bagged Temp (°F)','2hr Temp (°F)','6hr Temp (°F)','Batch (bags)','Notes']];
+  allLogs.filter(e=>e.type==='production').forEach(e=>{
+    const dt=new Date(e.timestamp);
+    // FIX Bug7: use != null so 0 temp exports correctly
+    prod.push([
+      dt.toLocaleDateString('en-US'),
+      dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+      e.product,
+      e.cookTemp != null ? e.cookTemp : '',
+      e.bagged?.temp != null ? e.bagged.temp : '',
+      e.check2h?.temp != null ? e.check2h.temp : '',
+      e.check6h?.temp != null ? e.check6h.temp : '',
+      e.batch||'',
+      e.notes||''
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(prod), 'Commissary Production');
+  // One sheet per location
+  LOCATIONS.forEach(loc => {
+    const rows = [['Date','Time','Product','Received Temp (°F)','Qty (bags)','Received By','Notes']];
+    allLogs.filter(e=>e.type==='receiving'&&e.location===loc).forEach(e=>{
+      const dt=new Date(e.timestamp);
+      rows.push([
+        dt.toLocaleDateString('en-US'),
+        dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+        e.product,
+        e.temp != null ? e.temp : '',
+        e.qty||'',
+        e.receivedBy||'',
+        e.notes||''
+      ]);
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), loc.substring(0,31));
+  });
+  XLSX.writeFile(wb, `TempLog_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Downloaded ✓');
+}
+
+// ══════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════
+function tempClass(t, type) {
+  if (type==='cook') return t>=165?'temp-safe':t>=145?'temp-warn':'temp-danger';
+  return t<=41?'temp-safe':t<=45?'temp-warn':'temp-danger';
+}
+function fmtDT(d) {
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+function toast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ══════════════════════════════════════════════════════════
+//  RECIPE EDITOR — init state after render
+//  We monkey-patch the renderRecipes call so after innerHTML is set
+//  for the editor view, _editorIngs is initialized
+// ══════════════════════════════════════════════════════════
+const _patchedRender = renderRecipes;
+// After renderRecipes sets editor HTML, initEditorState runs:
+// We do this cleanly by calling initEditorState at the end of recipeEditorHTML processing.
+// The recipeEditorHTML function already populates _editorIngs based on the recipe data —
+// we initialize _editorIngs explicitly here:
+
+// Override renderRecipes to also init _editorIngs when showing editor
+const _rrOrig = window.renderRecipes;
+window.renderRecipes = function(filter = '') {
+  const RECIPES = getAllRecipes();
+  const list = document.getElementById('recipe-list');
+  if (!list) return;
+
+  if (editingRecipeName !== null) {
+    // init editor state
+    const isNew = editingRecipeName === '';
+    _editorIngs = isNew
+      ? [{name:'',qty:''}]
+      : JSON.parse(JSON.stringify(RECIPES[editingRecipeName]?.ingredients || [{name:'',qty:''}]));
+    list.innerHTML = recipeEditorHTML(editingRecipeName);
+    return;
+  }
+
+  const keys = Object.keys(RECIPES).filter(k => !filter || k.toLowerCase().includes(filter.toLowerCase()));
+  const html = keys.map(name => {
+    const r = RECIPES[name];
+    const isCustom = customRecipes.hasOwnProperty(name);
+    const rdId = 'rd-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+    return `<div>
+      <div class="recipe-card" onclick="toggleRecipe('${name.replace(/'/g,"\\'").replace(/\\/g,'\\\\').replace(/"/g,'&quot;')}')">
+        <div class="rc-header">
+          <div>
+            <div class="rc-name">${name}${isCustom ? '<span class="recipe-custom-badge">CUSTOM</span>' : ''}</div>
+            <div class="rc-shift">${r.shift} SHIFT</div>
+          </div>
+        </div>
+        ${isCommissary ? `<div class="rc-actions" onclick="event.stopPropagation()">
+          <button class="rc-edit-btn" onclick="startEditRecipe('${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">✎ Edit</button>
+          ${isCustom ? `<button class="rc-edit-btn" style="color:var(--danger)" onclick="confirmDeleteRecipe('${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">✕ Delete</button>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="recipe-detail" id="${rdId}">
+        <div class="detail-head"><span>Ingredient</span><span>Qty</span></div>
+        ${r.ingredients.map(i => `<div class="detail-row">
+          <span>${i.name}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--text2)">${i.qty}</span>
+        </div>`).join('')}
+        ${r.process ? `<div class="detail-process">
+          <div class="detail-process-lbl">PROCESS & NOTES</div>
+          <div class="detail-process-text">${r.process.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = html + (isCommissary ? `<button class="add-recipe-btn" onclick="startNewRecipe()">+ Add New Recipe</button>` : '') + '<div class="bottom-pad"></div>';
+};
+// Call it on page init if needed (no-op since login comes first)
+</script>
+</body>
+</html>
