@@ -483,6 +483,39 @@ html, body {
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB94boblSdZAktXkoVHgH__1Xxtbbjri3Y",
+  authDomain: "kitchenapp-5d9cc.firebaseapp.com",
+  projectId: "kitchenapp-5d9cc",
+  storageBucket: "kitchenapp-5d9cc.firebasestorage.app",
+  messagingSenderId: "706481720558",
+  appId: "1:706481720558:web:8beb4f8b007233d49677ff"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+// Expose Firebase helpers to global scope for use in main script
+window._fb = {
+  db,
+  collection: (name) => collection(db, name),
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  doc: (colName, id) => doc(db, colName, id),
+  updateDoc
+};
+
+// Signal that Firebase is ready
+window._fbReady = true;
+window.dispatchEvent(new Event('fb-ready'));
+</script>
 <script>
 // ══════════════════════════════════════════════════════════
 //  HARDCODED DATA
@@ -555,8 +588,50 @@ function lsKey(k) { return 'kp_' + (isCommissary ? 'commissary' : currentLocatio
 function load(k, def) { try { const v = localStorage.getItem(lsKey(k)); return v !== null ? JSON.parse(v) : def; } catch(e) { return def; } }
 function save(k, v) { try { localStorage.setItem(lsKey(k), JSON.stringify(v)); } catch(e) {} }
 
-function loadLogs() { try { const v = localStorage.getItem('kp_all_logs'); return v ? JSON.parse(v) : []; } catch(e) { return []; } }
-function saveLogs(logs) { try { localStorage.setItem('kp_all_logs', JSON.stringify(logs)); } catch(e) {} }
+// ── FIREBASE LOG SYNC ──
+// In-memory log cache — populated by Firestore real-time listener
+let _logsCache = [];
+let _fbUnsubscribe = null;
+
+function startLogSync() {
+  if (!window._fb) return;
+  if (_fbUnsubscribe) _fbUnsubscribe(); // stop previous listener
+  const q = window._fb.query(window._fb.collection('temp_logs'), window._fb.orderBy('timestamp', 'desc'));
+  _fbUnsubscribe = window._fb.onSnapshot(q, (snapshot) => {
+    _logsCache = snapshot.docs.map(d => ({ _docId: d.id, ...d.data() }));
+    // Re-render if temp tab is active
+    if (tempMode) renderTempBody();
+  });
+}
+
+function loadLogs() { return _logsCache; }
+
+async function saveLogs(logs) {
+  // saveLogs is only called with a full array after adding/modifying an entry.
+  // We find the new/changed entry and write it to Firestore.
+  // For new entries (no _docId), add them. For updated entries, update by docId.
+  if (!window._fb) {
+    // Fallback: localStorage if Firebase not ready
+    try { localStorage.setItem('kp_all_logs', JSON.stringify(logs)); } catch(e) {}
+    _logsCache = logs;
+    return;
+  }
+  for (const entry of logs) {
+    if (!entry._docId) {
+      // New entry — add to Firestore
+      const { _docId, ...data } = entry;
+      try { await window._fb.addDoc(window._fb.collection('temp_logs'), data); } catch(e) { console.error(e); }
+    }
+    // Updated entries are handled by updateLogEntry()
+  }
+}
+
+async function updateLogEntry(docId, fields) {
+  if (!window._fb || !docId) return;
+  try {
+    await window._fb.updateDoc(window._fb.doc('temp_logs', docId), fields);
+  } catch(e) { console.error(e); }
+}
 
 function loadPars() { try { const v = localStorage.getItem('kp_global_pars'); return v ? JSON.parse(v) : {}; } catch(e) { return {}; } }
 function saveParsGlobal(p) { try { localStorage.setItem('kp_global_pars', JSON.stringify(p)); } catch(e) {} }
@@ -592,6 +667,8 @@ function loginCommissary() {
 document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') loginCommissary(); });
 
 function logout() {
+  if (_fbUnsubscribe) { _fbUnsubscribe(); _fbUnsubscribe = null; }
+  _logsCache = [];
   currentLocation = null; isCommissary = false; editing = false;
   openRecipe = null; editingRecipeName = null;
   document.getElementById('pin-input').value = '';
@@ -606,6 +683,12 @@ function launchApp() {
   document.getElementById('app-screen').classList.add('active');
   document.getElementById('loc-name').textContent = currentLocation;
   document.getElementById('loc-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  // Start Firestore real-time sync
+  if (window._fbReady) {
+    startLogSync();
+  } else {
+    window.addEventListener('fb-ready', startLogSync, { once: true });
+  }
   showTab('counts');
 }
 
@@ -975,12 +1058,11 @@ function productionForm() {
   </div>`;
 }
 
-function logProduction() {
+async function logProduction() {
   const item = document.getElementById('prod-item').value;
   const cook = parseFloat(document.getElementById('prod-cook').value);
   const batch = document.getElementById('prod-batch').value;
   const notes = document.getElementById('prod-notes').value;
-  const logs = loadLogs();
   const now = new Date();
   const entry = {
     id: Date.now(),
@@ -990,14 +1072,16 @@ function logProduction() {
     cookTemp: isNaN(cook) ? null : cook,
     batch: batch || null,
     notes: notes || null,
-    // FIX Bug5: bagged checkpoint due is now+15min, not now (so it doesn't instantly show overdue)
     bagged: { time: new Date(now.getTime()+15*60000).toISOString(), temp: null },
     check2h: { time: new Date(now.getTime()+2*3600000).toISOString(), temp: null },
     check6h: { time: new Date(now.getTime()+6*3600000).toISOString(), temp: null },
     timestamp: now.toISOString()
   };
-  logs.unshift(entry);
-  saveLogs(logs);
+  if (window._fb) {
+    try { await window._fb.addDoc(window._fb.collection('temp_logs'), entry); } catch(e) { console.error(e); }
+  } else {
+    _logsCache.unshift(entry);
+  }
   scheduleNotification(item, 2, entry.id);
   scheduleNotification(item, 6, entry.id);
   toast('Production logged — cooling checkpoints set');
@@ -1063,10 +1147,15 @@ function coolingLog() {
   }).join('') + '</div>';
 }
 
-function logCheckpoint(id, key, temp) {
-  const logs = loadLogs();
-  const entry = logs.find(e => e.id === id);
-  if (entry) { entry[key].temp = temp; saveLogs(logs); }
+async function logCheckpoint(id, key, temp) {
+  const entry = _logsCache.find(e => e.id === id);
+  if (entry) {
+    if (entry._docId && window._fb) {
+      await updateLogEntry(entry._docId, { [key]: { time: entry[key].time, temp } });
+    } else {
+      entry[key].temp = temp;
+    }
+  }
   toast('Temp logged ✓');
   renderTempBody();
 }
@@ -1086,7 +1175,7 @@ function receivingForm() {
   </div>`;
 }
 
-function logReceiving() {
+async function logReceiving() {
   const item = document.getElementById('recv-item').value;
   const temp = parseFloat(document.getElementById('recv-temp').value);
   const qty = document.getElementById('recv-qty').value;
@@ -1095,23 +1184,25 @@ function logReceiving() {
 
   if (!by.trim()) { toast('Enter your name'); return; }
 
-  const logs = loadLogs();
-  logs.unshift({
+  const entry = {
     id: Date.now(),
     type: 'receiving',
     location: currentLocation,
     product: item,
-    // FIX Bug7: use != null check (not ||) so temp 0 is preserved
     temp: isNaN(temp) ? null : temp,
     qty: qty || null,
     receivedBy: by || null,
     notes: notes || null,
     timestamp: new Date().toISOString()
-  });
-  saveLogs(logs);
-  // FIX Bug6: clear form and show confirmation state
+  };
+
+  if (window._fb) {
+    try { await window._fb.addDoc(window._fb.collection('temp_logs'), entry); } catch(e) { console.error(e); }
+  } else {
+    _logsCache.unshift(entry);
+  }
   toast('Receiving log saved ✓');
-  renderTempBody(); // re-render the form to clear all fields
+  renderTempBody();
 }
 
 function historyView() {
